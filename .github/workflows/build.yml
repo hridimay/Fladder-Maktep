@@ -130,23 +130,23 @@ jobs:
           echo "ARTIFACT_SUFFIX=${{ needs.fetch-info.outputs.build_type }}" >> $GITHUB_ENV
           echo "ARTIFACT_SUFFIX=${{ needs.fetch-info.outputs.build_type }}" >> $GITHUB_OUTPUT
 
-      - name: Decode Keystore for release
-        if: needs.fetch-info.outputs.build_type != 'development'
-        env:
-          ENCODED_STRING: ${{ secrets.KEYSTORE_BASE_64 }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          RELEASE_KEYSTORE_ALIAS: ${{ secrets.RELEASE_KEYSTORE_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-          GITHUB_RUN_NUMBER: ${{ github.run_number }}
-        run: |
-          echo "$ENCODED_STRING" | base64 -d > android/app/keystore.jks
+      - name: Generate self-signed keystore
+  run: |
+    keytool -genkey -v \
+      -keystore android/app/keystore.jks \
+      -alias release \
+      -keyalg RSA \
+      -keysize 2048 \
+      -validity 10000 \
+      -storepass android \
+      -keypass android \
+      -dname "CN=Fladder, OU=Dev, O=Dev, L=City, S=State, C=US"
 
-          # Create the key.properties file
-          cat > android/app/key.properties <<EOF
-          storePassword=$RELEASE_KEYSTORE_PASSWORD
-          keyPassword=$RELEASE_KEY_PASSWORD
-          keyAlias=$RELEASE_KEYSTORE_ALIAS
-          EOF
+    cat > android/app/key.properties <<EOF
+    storePassword=android
+    keyPassword=android
+    keyAlias=release
+    EOF
 
       - name: Setup Java
         uses: actions/setup-java@v4
